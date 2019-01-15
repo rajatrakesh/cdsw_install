@@ -1,62 +1,47 @@
-* CDSW INSTALL
-  :PROPERTIES:
-  :CUSTOM_ID: cdsw_install
-  :END:
+## CDSW Installation On Cloud
 
-This project is all about installing a CDSW cluster using Director on any of the Big Three Cloud Providers.
+This project is derived from the fantastic work done by TobyFergusion (https://github.com/tobyHFerguson). Toby wrote an extensive document on how to install CDSW early on. The document is quite technical and provides extensive coverage into how CDSW is to be installed. I aim to extend that and perhaps simply certain steps, highlight a few gotchas that I encountered in the process. 
 
-Basic idea is to have a single definition of a cluster which is shared
-across multiple cloud providers and to make it very simple for a user to
-say 'I want this cluster to be on cloud provider X, or cloud provider
-Y', confident that the cluster definition is the same; i.e. to separate
-out the cluster configuration that is independent of cloud providers
-from that which is unique to each provider and to make it easy for the
-user to indicate which cloud provider to use.
+The aim of this following document is to simply the creation and deployment of the CDSW cluster (including kerberos) on Cloud Platforms (AWS, Azure and GCP) using Cloudera Director. 
 
-This project is focused on making this easy; not in exposing the end user to every possible configuration alternative.
+The approach for deployment remains largely the same so with minor changes, you would have flexibility to change and deploy CDSW on any of the Cloud platforms. **Note for this document, I've current done extensive testing with AWS. I will update the Azure and GCP segment and configuration in the coming weeks as well.  
 
-We support and test on three cloud providers (AWS, Azure and GCP), and
-the user choose which cloud provider to use by choosing the top level or
-provider conf file (=aws.conf=, =azure.conf= or =gcp.conf=).
+The total duration of the build would be around an hour end-to-end and I have made some edits in the scripts to automate certain steps which were previously manual. 
 
-Building a cluster this way takes about an hour, AFTER which it can take
-up to an HOUR after the cluster is ready for CDSW to also be ready. I've
-seen this on Azure. CDSW on AWS and GCP seems to take around 10-20 mins
-to get ready to deliver service.
+## Pre-Requsities
 
-If you want to struggle then stop reading right here, and just whack
-at it. Lots of people have gone that route and enjoyed the exercise.
+Needless to say, before you start you must have access to respective cloud platform with adequate credits to deploy CDSW/CDH Cluster. At the very minimum, we will deploy (3+1+1+3) nodes of various shapes, so this may need adequate credits based on the shape that you use. 
 
-If you'd prefer to get your job done and a CDSW cluster constructed, continue reading ...
+Our basic workflow would be as follows:
 
-* Workflow
-  :PROPERTIES:
-  :CUSTOM_ID: workflow
-  :END:
+* Deploy a single EC2 instance and configure Diretor 2.8 (This is the current tested release. Going forward, I will update this document to include Altus Director v6.1)
+* Download this github repo on to your local system
+* Update the required configuration settings, SECRETS etc. that reflect your enviroment
+* Add the necessary SECRET and ssh key files
+* Upload all the necessary configuration files needed for Director to create a deployment (All the files in this github repo)
+* Execute the Bootstrap from Director
+* Test and Validate
 
-This project is based upon the following workflow. See subsequent sections for details:
-+ Install pre-requisites (i.e. Director and optionally an MIT KDC on the Director instance)
-+ Get this repository onto the Director instance (git, scp ... however)
-+ Edit the appropriate files to reflect your environment
-+ Add the necessary SECRET and ssh key files
-+ Bootstrap the cluster
+**Other Tools**
+* Putty/Terminal for ssh
+* Textedit or Textwrangler for editing property files
 
-It will make more sense if you read the [[Project Structure]] section.
-** Pre-requisites
+## Instance Shapes / Cost
 
-   :PROPERTIES:
-   :CUSTOM_ID: pre-requisites
-   :END:
+For the deployment, I would be using the following shapes in AWS:
+Director (4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
+CDH Master (4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
+CDH Workers (4CPU, 16 GB RAM)		- m4.xlarge (xx/hr)
+CDSW Master (16CPU, 64 GB RAM)	- m4.xlarge (xx/hr)
+CDSW Worker (16CPU, 64 GB RAM)	- m4.xlarge (xx/hr)
 
-*** Installing Director
-    :PROPERTIES:
-    :CUSTOM_ID: installing-director
-    :END:
+For all instances, I will be using the following AMI - ami-78485818
+All instances will be launched in the region : us-west-1 which is also the cheapest option based on instance cost.
 
-**** AWS
-     :PROPERTIES:
-     :CUSTOM_ID: aws-1
-     :END:
+## Step 1: Director Step
+
+For this segment, to demonstrate, I will leverage AWS to deploy this cluster. Let's provision an instance, and deploy director. For director setup, you can simply execute the script install_director.sh. This does not require any changes/edits and will deploy Director. I've added a few screenshots below to highlight some of the crucial steps. 
+
 
 I simply setup a vm (4 CPUs, 16G RAM) and then use
 [[https://github.com/TobyHFerguson/director-scripts/blob/master/cloud-lab/scripts/install_director.sh][install_director.sh]]
