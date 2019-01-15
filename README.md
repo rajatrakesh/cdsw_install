@@ -16,7 +16,7 @@ Our basic workflow would be as follows:
 
 * Deploy a single EC2 instance and configure Diretor 2.8 (This is the current tested release. Going forward, I will update this document to include Altus Director v6.1)
 * Download this github repo on to your local system
-* Update the required configuration settings, SECRETS etc. that reflect your enviroment
+* Update the required configuration settings, property files. that reflect your enviroment
 * Add the necessary SECRET and ssh key files
 * Upload all the necessary configuration files needed for Director to create a deployment (All the files in this github repo)
 * Execute the Bootstrap from Director
@@ -29,20 +29,64 @@ Our basic workflow would be as follows:
 ## Instance Shapes / Cost
 
 For the deployment, I would be using the following shapes in AWS:
-Director (4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
-CDH Master (4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
-CDH Workers (4CPU, 16 GB RAM)		- m4.xlarge (xx/hr)
-CDSW Master (16CPU, 64 GB RAM)	- m4.xlarge (xx/hr)
-CDSW Worker (16CPU, 64 GB RAM)	- m4.xlarge (xx/hr)
 
-For all instances, I will be using the following AMI - ami-78485818
-All instances will be launched in the region : us-west-1 which is also the cheapest option based on instance cost.
+* Director 	( 4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
+* CDH Master 	( 4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
+* CDH Workers	( 4CPU, 16 GB RAM)		- m4.xlarge (xx/hr)
+* CDSW Master	(16CPU, 64 GB RAM)		- m4.xlarge (xx/hr)
+* CDSW Worker	(16CPU, 64 GB RAM)		- m4.xlarge (xx/hr)
+
+For all instances, I will be using the following AMI - ```ami-78485818```
+All instances will be launched in the region : ```us-west-1``` which is also the cheapest option based on instance cost.
 
 ## Step 1: Director Step
 
 For this segment, to demonstrate, I will leverage AWS to deploy this cluster. Let's provision an instance, and deploy director. For director setup, you can simply execute the script install_director.sh. This does not require any changes/edits and will deploy Director. I've added a few screenshots below to highlight some of the crucial steps. 
 
+![Launch instance](./images/director-01.jpg)
 
+Goto the EC2 screen and launch an instance in the ```us-west-1``` region for the ```ami-78485818```. 
+
+![Select instance shape](./images/director-02.jpg)
+
+At the very minimum, select the ```m4.xlarge``` shape (4CPU, 16 GB RAM) instance. 
+
+![Select instance shape](./images/director-03.jpg)
+
+In this screen, select the VPC that you may have created before to launch this instance. If you don't have a VPC yet, then you can create one at this stage. 
+
+![Disk space](./images/director-04.jpg) 
+
+Increase the size of the disk from 8 GB to 40 GB and select the 'Delete on Termination' Flag. This will ensure that any volumes attached to this instances are also deleted when this instance is terminated. 
+
+![Assign Tags](./images/director-05.jpg)
+
+Configure any tags that you may want to assign to your instance. These are quite handy esp. if you are using a shared environment where multiple instances are being run by other users and if you want to filter the ones that you have quickly. 
+
+![Security Groups](./images/director-06.jpg)
+
+In this screen, you need to setup the security groups and open the necessary ports. AWS instances would not allow inbound access to to the specific ports required if access is not explictly enabled. 
+
+The ports that need to be opened are as follows:
+
+* 22 - SSH
+* 80 - CDSW
+* 7180 - Cloudera Manager
+* 7189 - Cloudera Director
+
+![Open ports](./images/director-07.jpg)
+![Open ports](./images/director-08.jpg)
+ 
+Finally, review and launch your instance. Note the warning that credits (paid) would be consumed in your account for the duration this instance runs. 
+
+![Open ports](./images/director-09.jpg)
+
+The last step is to select a key pair (if one exists in your account). You can also create a key pair and assign it to your instance in this screen. Please do remember to download the key paid once you have created it. This is the time when you would be able to download the key pair after creating it. This private key would be required for you to ssh into your vm instance. 
+
+
+ 
+ 
+ 
 I simply setup a vm (4 CPUs, 16G RAM) and then use
 [[https://github.com/TobyHFerguson/director-scripts/blob/master/cloud-lab/scripts/install_director.sh][install_director.sh]]
 to install director.
