@@ -83,8 +83,80 @@ Finally, review and launch your instance. Note the warning that credits (paid) w
 
 The last step is to select a key pair (if one exists in your account). You can also create a key pair and assign it to your instance in this screen. Please do remember to download the key paid once you have created it. This is the time when you would be able to download the key pair after creating it. This private key would be required for you to ssh into your vm instance. 
 
+## Configuration Files
 
- 
+There are a number of configuration files that are required and needed for this setup:
+
+Root Diectory (/)
+* common.conf
+* aws.conf
+
+AWS Folder (/aws)
+* aws.conf
+* cluster.configs.HDFS.core_site_safety_valve.conf
+* instances.conf
+* kerberos.properties
+* provider.conf
+* provider.properties
+* ssh.properties
+
+Scripts Folder (/scripts)
+* cdsw_postcreate.sh
+* cdswmaster-bootstrap-script.sh
+* clean-yum-cache.sh
+* java8-bootstrap-script.sh
+* jdk_security.sh
+* kerberos_client.sh
+* ntpd.sh
+* users.sh
+
+We will first go through all the configuration files in brief, and make the changes that are required for the setup. **The current script has all the defaults pre-setup and doesn't require any changes, unless specifically required.** 
+
+### common.conf
+
+This is an imporant configuration file and might require a few changes. This configuration file captures the following:
+
+* Cluster Name
+* ssh credentials (used for accessing other nodes by Cloudera Manager)
+* Cloudera Manager Configuration (including for Kereberization)
+* Parcel Locations for CDSW, Spark2 On Yarn, Cloudera Manager, CDH, Anaconda
+* Roles that will be installed on CDH (HDFS, YARN, CDSW, SPARK2_ON_YARN, HIVE, OOZIE, IMPALA & HUE)
+* Parameterized Variables for # of instances and instance types that will be setup for CDH Master & Worker, CDSW Master and Worker Nodes
+* Location of post create/bootstrap scripts that need to be executed
+
+Since this file has been largely parameterized, there are not many changes required here, unless you need to change the version of CDH, or if you get any errors on parcel locations or a specific version not be found
+
+**Update 14th Jan, 2019**
+There were some errors that I encountererd with Anaconda 5.0.1 not being available so I have made changes so that it now looks for 5.1.0.1
+
+The following version are installed:
+CDH: 5-14
+SPARK: 2.2.0.cloudera2
+Anaconda: 5.1.0.1
+CDSW: 1.4.0.p1.431664
+
+
+## aws.conf
+This file just has links for the main conf files in the /aws folder. **No changes required**
+
+
+## /aws/aws.conf
+Serves as an include file. **No Changes Required**
+
+## /aws/cluster.configs.HDFS.core_site_safety_valve.conf
+A few standard configuration setting on block size etc. **No changes required**
+
+## /aws/instances.conf
+
+## /aws/kerberos.properties
+
+## /aws/provider.conf
+
+## /aws/provider.properties
+
+## /aws/ssh.properties
+
+
  
  
 I simply setup a vm (4 CPUs, 16G RAM) and then use
