@@ -83,36 +83,40 @@ Finally, review and launch your instance. Note the warning that credits (paid) w
 
 The last step is to select a key pair (if one exists in your account). You can also create a key pair and assign it to your instance in this screen. Please do remember to download the key paid once you have created it. This is the time when you would be able to download the key pair after creating it. This private key would be required for you to ssh into your vm instance. 
 
-## Configuration Files
+## Configuration Files & Project Structure
 
 There are a number of configuration files that are required and needed for this setup:
 
-Root Diectory (/)
-* common.conf
-* aws.conf
-
-AWS Folder (/aws)
-* aws.conf
-* cluster.configs.HDFS.core_site_safety_valve.conf
-* instances.conf
-* kerberos.properties
-* provider.conf
-* provider.properties
-* ssh.properties
-
-Scripts Folder (/scripts)
-* cdsw_postcreate.sh
-* cdswmaster-bootstrap-script.sh
-* clean-yum-cache.sh
-* java8-bootstrap-script.sh
-* jdk_security.sh
-* kerberos_client.sh
-* ntpd.sh
-* users.sh
+		/
+		-->common.conf
+		-->aws.conf
+		-->install_director.sh
+		-->install_mit_kdc.sh
+		-->install_mit_client.sh
+		/aws
+		-->aws.conf
+		-->cluster.configs.HDFS.core_site_safety_valve.conf
+		-->instances.conf
+		-->kerberos.properties
+		-->provider.conf
+		-->provider.properties
+		-->ssh.properties
+		-->SECRET.properties
+		-->**public key**
+		-->**private key**
+		/scripts
+		-->cdsw_postcreate.sh
+		-->cdswmaster-bootstrap-script.sh
+		-->clean-yum-cache.sh
+		-->java8-bootstrap-script.sh
+		-->jdk_security.sh
+		-->kerberos_client.sh
+		-->ntpd.sh
+		-->users.sh
 
 We will first go through all the configuration files in brief, and make the changes that are required for the setup. **The current script has all the defaults pre-setup and doesn't require any changes, unless specifically required.** 
 
-### common.conf
+## common.conf
 
 This is an imporant configuration file and might require a few changes. This configuration file captures the following:
 
@@ -139,7 +143,6 @@ CDSW: 1.4.0.p1.431664
 ## aws.conf
 This file just has links for the main conf files in the /aws folder. **No changes required**
 
-
 ## /aws/aws.conf
 Serves as an include file. **No Changes Required**
 
@@ -147,35 +150,64 @@ Serves as an include file. **No Changes Required**
 A few standard configuration setting on block size etc. **No changes required**
 
 ## /aws/instances.conf
+This file has the instance configuration options for CDH Master & Worker Nodes, CDSW Master & Worker Nodes. 
+
+All the settings have been parameterized, so you can configure them from provider.properties. This file configures the intance type, instance name for CDH and additional properties such as rootVolumeSize, ebsVolumes for cdsw master and workers. For the most bit, you wouldn't need to tinker with this file much.
 
 ## /aws/kerberos.properties
+This is an important file, and relevant ONLY IF you are kerberizing your cluster. If you don't want kerberization, simply remove this file from your folder before you upload the diretory to the director instance. If you are looking to bring up a test cluster with CDSW, no changes required. 
+
+SECURITY_REALM:
+HADOOPSECURITY.LOCAL
+
+Users:
+cm/admin@HADOOPSECURITY.LOCAL
+cdsw@HADOOPSECURITY.LOCAL
+
+KDC_HOST_IP: 0.0.0.0
+
+**Update 16 Jan** I have added a script, which will automatically update the KDC_HOST_IP to the **internal** ip of the node where KDC is installed (instance currently running Director)
 
 ## /aws/provider.conf
+Sets up aws properties in variables (accessKeyId etc.) **No changes required**
 
 ## /aws/provider.properties
+This is an important file as various defaults are configured in this file. The important ones being as follows. **REMEMBER TO UPDATE** the accesskeyid and other fields before you deploy. 
+
+		AMI_ID=ami-78485818
+		AWS_ACCESS_KEY_ID=##Your AWS Key##
+		AWS_REGION=us-west-1
+		OWNER=rajat
+		SECURITY_GROUP_ID=##Your Security Group ID##
+		SUBNET_ID=##Your subnet ID##
+		CDHMASTER_INSTANCE=c4.2xlarge
+		CDHWORKER_INSTANCE=c4.4xlarge
+		CDHWORKER_NODECOUNT=3
+		CDSWWORKER_INSTANCE=c4.4xlarge
+		CDSWMASTER_INSTANCE=c4.4xlarge
+		CDSWWORKER_NODECOUNT=2
+		YARN_RAM=4096
+		YARN_VCORES=2
+		NAME_PREFIX=rajat
+		
+Make sure you provide adequate nodes for CDH and CDSW workers as well as the appropriate shape for the instances. I typically assign larger shapes to CDSW Master and Workers (c4.8xlarge) for workshops. 
+
+## SECRET.properties
+You need to create this file in the same folder. For some reason, Github does not let me upload this file, perhaps due to the name. This file would have only one field. **Be mindful if you maintain your files on github; This file being shared publicly (and AWS ACCESS KEY) may give others access to your aws account.**
+
+		AWS_SECRET_ACCESS_KEY=##Your AWS Key##
 
 ## /aws/ssh.properties
+This file just has the default ssh username. In our case, that is ```centos```.You would also need to update the field:
 
-
+		SSH_PRIVATEKEY=aws/cdsw-admin
+		
+Before you upload the zip file (having all properties files, scripts as mentioned in the steps below), please ensure that your public key and private key files are available in the ```/aws``` folder.
  
- 
-I simply setup a vm (4 CPUs, 16G RAM) and then use
-[[https://github.com/TobyHFerguson/director-scripts/blob/master/cloud-lab/scripts/install_director.sh][install_director.sh]]
-to install director.
+Your /aws folder should have the following files:
 
-**** GCP
-     :PROPERTIES:
-     :CUSTOM_ID: gcp-2
-     :END:
+![Folder Struture](./images/folder-01.jpg) 
 
-I simply setup a vm (4 CPUs, 16G RAM) and then use
-[[https://github.com/TobyHFerguson/director-scripts/blob/master/cloud-lab/scripts/install_director.sh][install_director.sh]]
-to install director.
-
-***** GCP Director Configuration
-      :PROPERTIES:
-      :CUSTOM_ID: gcp-director-configuration
-      :END:
 
 For GCP you will need to ensure that the plugin supports rhel7. Do this
 by adding the following line to your =google.conf= file. This file
@@ -267,6 +299,13 @@ to create a client for testing purposes.).
 
 - Execute a director bootstrap command using the cloud provider you
   chose, but make sure you do it from the top directory (i.e. the one where the =common.conf= file is located).
+  
+  
+  
+  
+  
+  
+  
 
 #+BEGIN_SRC sh
     cloudera-director bootstrap-remote $PROVIDER.conf --lp.remote.username=admin --lp.remote.password=admin
