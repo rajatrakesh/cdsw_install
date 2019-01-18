@@ -23,6 +23,7 @@ Our basic workflow would be as follows:
 * Test and Validate
 
 **Other Tools**
+
 * Putty/Terminal for ssh
 * Textedit or Textwrangler for editing property files
 
@@ -136,9 +137,10 @@ There were some errors that I encountererd with Anaconda 5.0.1 not being availab
 The following version are installed:
 CDH: 5-14
 SPARK: 2.2.0.cloudera2
-Anaconda: 5.1.0.1
+Anaconda: 5.0.1
 CDSW: 1.4.0.p1.431664
 
+**Update 16 Jan, 2019** I have updated this to reflect the new parcel location for Anaconda. Per our [documentation](https://www.cloudera.com/documentation/data-science-workbench/latest/topics/cdsw_requirements_supported_versions.html), Cloudera Data Science only supports Anaconda 5.0.1, which ships Python 2.7. Newer version of Anconda do not ship Python 2.
 
 ## aws.conf
 This file just has links for the main conf files in the /aws folder. **No changes required**
@@ -166,7 +168,8 @@ cdsw@HADOOPSECURITY.LOCAL
 
 KDC_HOST_IP: 0.0.0.0
 
-**Update 16 Jan** I have added a script, which will automatically update the KDC_HOST_IP to the **internal** ip of the node where KDC is installed (instance currently running Director)
+ote that its the /ip address/ that you should use
+  here because of a CDSW/Kubernetes defect: [[https://jira.cloudera.com/browse/DSE-1796][DSE-1796]]
 
 ## /aws/provider.conf
 Sets up aws properties in variables (accessKeyId etc.) **No changes required**
@@ -208,529 +211,140 @@ Your /aws folder should have the following files:
 
 ![Folder Struture](./images/folder-01.jpg) 
 
+## Public and Private Keys
+When you launched the Director instance in the above steps, there was a step to download the .pem file. 
 
-For GCP you will need to ensure that the plugin supports rhel7. Do this
-by adding the following line to your =google.conf= file. This file
-should be located in the provider directory:
-=/var/lib/cloudera-director-plugins/google-provider-*/etc= (where the
-=*= matches the version - something like =1.0.4= - of your plugins). You
-will likely have to create your own copy of google.conf by copying
-=google.conf.example= located in the same directory. Note that the exact
-path to the relevant image is obtained by navigating to GCP's 'Images'
-section and finding the corresponding OS/URL pair.
+Make sure that you have the name of the file properly referenced in the property file above (ssh.properties). The private key needs to be in the /aws folder as well. 
 
-#+BEGIN_EXAMPLE
-         rhel7 = "https://www.googleapis.com/compute/v1/projects/rhel-cloud/global/images/rhel-7-v20171025"
-#+END_EXAMPLE
+For the public key, we need to connect to the instance and download the file. Let's open an ssh session to the terminal. Before this, make sure that you have changed the permission on the .pem file. In my case, the name of my private key attached to the instance is cdsw-demo.pem:
 
-Assuming gcloud is on your path in that director instance, then this
-script will do exactly what you need:
+	sudo chmod 600 cdsw-demo.pem
 
-#+BEGIN_EXAMPLE
-    sudo tee /var/lib/cloudera-director-plugins/google-provider-*/etc/google.conf 1>/dev/null <<EOF
-    google {
-      compute {
-        imageAliases {
-          centos6="$(gcloud compute images list  --filter='name ~ centos-6-v.*' --uri)",
-          centos7="$(gcloud compute images list  --filter='name ~ centos-7-v.*' --uri)",
-          rhel6="$(gcloud compute images list  --filter='name ~ rhel-6-v.*' --uri)",
-          rhel7="$(gcloud compute images list  --filter='name ~ rhel-7-v.*' --uri)"
-        }
-      }
-    }
-    EOF
-#+END_EXAMPLE
+Open the session and locate the public key. It would be in the folder ~/.ssh:
+	
+	ssh -i cdsw-demo.pem centos@54.183.236.130
+	cd ~/.ssh
+	ls 
+	authorized_keys
+	
+Run cat to copy the contents and save on your local machine as cdsw-demo.pub
+	
+	cat authorized_keys 
+	ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQClbj5MLoHGkDo2vmRsWbyCpxYb1i4L3e9Zj
+	YufG2CLYSm0duMRs5OeCQdiNOmSkMPY7S79lMgijUDtwb/98buRMWuI6F9qFTk5ij7HJY70mI9jJcZfCoUQGJ79ktmVc4AcliUjXql4ig5KuAfchJlNxGX
+	+43+KI4KTLHjXK46uwyOagGZCs/a3cv6Q3cHob1cKShCS4EB*******************************************
+	
+## Last Checks / Tips
 
-**** Azure
-     :PROPERTIES:
-     :CUSTOM_ID: azure
-     :END:
+Once you have downloaded the public and private keys, I would recommend copying them to your local ~/.ssh folder so that you are able to do a password-less sudo to the AWS instance. 
 
-Create a Cloudera Director by using the Microsoft Marketplace. In
-keeping with minimizing what you have to do this project assumes you
-have chosen the defaults whenever possible (e.g. networking etc)
+As a practice, I keep both my public and private keys in this folder. You may also want to update the config file and add the entry to your director instance, to make it easier to connect. 
 
-You'll need to note: * the Resource Group that the director instance is
-created in * The Region that the Resource Group is setup in * the public
-domain name prefix of the director instance. (i.e. the hostname and
-instance name of the director VM) * the host fqdn suffix (aka Private
-DNS domain name). This is the DNS zone in which the Director and cluster
-will be constructed. * the private IP address of the director instance
-that is created (if you're going to put an MIT KDC on the Director
-instance)
+The entry would look like:
 
-*** Installing MIT Kerberos (optional)
-    :PROPERTIES:
-    :CUSTOM_ID: installing-mit-kerberos
-    :END:
+	host aws-demo-director
+		hostname ec2-13-57-227-102.us-west-1.compute.amazonaws.com
+		user centos
+		identityFile ~/.ssh/cdsw-demo
+		
+After this, you can simply connect by:
 
-If I choose to use MIT Kerberos I install the MIT KDC on the Director
-VM, no matter which cloud provider I'm using.
+	ssh centos@aws-demo-director
 
-I do that using
-[[https://github.com/TobyHFerguson/director-scripts/blob/master/cloud-lab/scripts/install_mit_kdc.sh][install_mit_kdc.sh]]
-to install an mit kdc. (There's also
-[[https://github.com/TobyHFerguson/director-scripts/blob/master/cloud-lab/scripts/install_mit_client.sh][install_mit_client.sh]]
-to create a client for testing purposes.).
+Make sure the .sh file have execute permissions, before you zip and upload to the instance. 
+
+	sudo chmod 777 install_*.sh
+	
+Now we are ready to upload all folder with all the necessary config files and scripts to the Director instance. 
+
+In my case, all my files are in the ```cdsw-demo``` directory. The following commands with create a tar file of contents of the folder, upload it to the director instance and unzip it into the /home/centos/ folder. 
+
+	cd cdsw-demo
+	T=/tmp/cdsw.tar
+	tar cf $T . && scp $T aws-demo-director:$T && ssh aws-demo-director tar xf $T
+
+![SSH](./images/bash-01.jpg)
+
+## Director Installation
+
+Now we can start the Director installation by executing the install_director.sh script. 
+
+	$./install-director.sh
+
+It would download and setup director. Once everything is complete, you would see the following (<15 mins):
+
+![Director Installation Completion](./images/bash-02.jpg)
+
+We can validate whether Director is successfully installed. Copy the public IP from AWS EC2 console. Director is accessible on port **7189**. If you have issues accesing this, check if you have configured your security group properly and that inbound port 7189 is open. 
+
+You should be able to see the following screen:
+
+![Director Successfully Installed](./images/director-10.jpg)
+
+For the purpose of this setup, we actually don't need to access Director through the console, but we will click "Accept the Terms and Conditions" and just goto the next screen. 
+
+![Director Login Screen](./images/director-11.jpg)
+
+**Tip** There are times where I have noticed that on accessing the web console for Director tends to mess up my director bootstrap option. Also, if for any reason, the bootstrap fails mid way, then I would suggest re-doing the installation for Director. I've usually found that to be a quicker option, than to debug. 
+
+## KDC Installation:
+
+With Director up and running, let's setup KDC on this instance as well. We would re-using the director instance for this, hence the Director instance needs to be operational the entire time, even after the cluster has been brought up. 
+
+The script to install KDC, should also be available in the /home/centos folder. Execute the ./install_mit_kdc.sh. Since this needs root access, so execute as follows:
+
+	sudo ./install_mit_kdc.sh
+
+The installation should be quick, and once installed you should see two principal accounts created. 
+
+![KDC Installation](./images/kdc-01.jpg)
+
+To test, you can setup the kdc client and test that the cdsw principal through the client. The client can be set by executing the following:
+	
+	sudo ./install_mit_client.sh $(hostname -I)
+	
+Once the installation is complete, we can test the prinicpal cdsw@HADOOPSECURITY.LOCAL [Password: Cloudera1] by executing the following. If there are any errors, it will report on the screen. No response means that the validation of the principal and password is successful. 
+
+	kinit cdsw@HADOOPSECURITY.LOCAL
+	
+![KDC Client Test](./images/kdc-02.jpg)
+
+The last step now is to change the ```KDC_HOST_IP``` variable in the ```./aws/kerberos.properties``` file. You can identify the internal ip of the KDC Host by:
+
+	$hostname -I
+	10.0.108.0
+	
+Copy and replace this in the kerberos.properties. After this step, the only thing left to do is to run the director bootstrap. 
+
+The director bootstrap needs to be executed in /home/centos/ and **NOT** in the /aws folder where all the configuration files are. 
+
+	cloudera-director bootstrap-remote aws.conf --lp.remote.username=admin --lp.remote.password=admin
+	
+The installation will begin, and you would see something like this:
+
+![Director Bootstrap](./images/director-12.jpg)
 
 
-** Preparation
-   :PROPERTIES:
-   :CUSTOM_ID: preparation
-   :END:
 
-- Choose the cloud provider you're going to work with and edit the
-  =$PROVIDER/*.properties= and =$PROVIDER/SECRET= files appropriately.
-- Ensure that all the files (including the SSH key file) is available to
-  director (i.e copy or clone as necessary to the director server
-  machine).
-- Ensure that the [[SECRET files]] are in place
-- Ensure that the =$PROVIDER/kerberos.properties= file is either absent
-  (you don't want a kerberized cluster) or is present and correct (in
-  particular you want to ensure that the =KDC_HOST_IP= property is set
-  to the /ip address/ of the KDC server host (which should also be the
-  Director host). Note that its the /ip address/ that you should use
-  here because of a CDSW/Kubernetes defect: [[https://jira.cloudera.com/browse/DSE-1796][DSE-1796]]
+	
 
-** Cluster Creation
-   :PROPERTIES:
-   :CUSTOM_ID: cluster-creation
-   :END:
+	
 
-- Execute a director bootstrap command using the cloud provider you
-  chose, but make sure you do it from the top directory (i.e. the one where the =common.conf= file is located).
+
+	
+
+
+
+
+
+	
+
+	
+	
+
+
+
+
+
   
-  
-  
-  
-  
-  
-  
 
-#+BEGIN_SRC sh
-    cloudera-director bootstrap-remote $PROVIDER.conf --lp.remote.username=admin --lp.remote.password=admin
-#+END_SRC
-
-See [[No provider]] for what happens if you're in the wrong directory.
-
-** Post Creation
-   :PROPERTIES:
-   :CUSTOM_ID: post-creation
-   :END:
-
-- Once completed, use your cloud provider's console to find the public
-  IP (e.g. =104.92.37.53=) address of the CDSW instance. Its name in the cloud
-  provider's console will begin with =cdsw-=.
-- You can reach the CDSW at =cdsw.104.92.37.53.nip.io=. See [[NIP.io tricks]] for
-  details about how that =nip.io= stuff works.
-
-All nodes in the cluster will contain the user =cdsw=. That user's
-password is =Cloudera1=. (If you used my mit kdc installation scripts
-from below then you'll also find that this user's kerberos username and
-password are =cdsw= and =Cloudera1= also).
-
-* Project Structure
-** File Organization
-   :PROPERTIES:
-   :CUSTOM_ID: file-organization
-   :END:
-
-*** Overview
-    :PROPERTIES:
-    :CUSTOM_ID: overview
-    :END:
-
-The system comprises a set of files, some common across cloud providers,
-and some specific to a particular cloud provider. The common files (and
-those which indicate which cloud provider to user) are all in the top
-level directory; the cloud provider specific files are cloud provider
-specific directories.
-
-*** File Kinds
-    :PROPERTIES:
-    :CUSTOM_ID: file-kinds
-    :END:
-
-There are three kinds of files:
-
-- Property Files - You are expected to modify these. They match the
-  =*.properties= shell pattern and use the
-  [[https://docs.oracle.com/javase/8/docs/api/java/util/Properties.html#load-java.io.Reader-][Java
-  Properties format]]
-- Conf files - You are not expected to modify these. They match the
-  =*.conf= shell pattern and use the
-  [[https://github.com/typesafehub/config/blob/master/HOCON.md][HOCON
-  format]] (a superset of JSON).
-- SECRET files - these have the prefix =SECRET= and are used to hold
-  secrets for each provider. The exact format is provider specific.
-
-The intent is that those items that you need to edit are in a format
-(i.e. =*.properties= files) that is easy to edit, whereas those items
-that you don't need to touch are in the harder to edit HOCON format
-(i.e. =*.conf= files).
-
-*** Directory Structure
-    :PROPERTIES:
-    :CUSTOM_ID: directory-structure
-    :END:
-
-The top level directory contains the main =conf= files (=aws.conf=,
-=azure.conf= & =gcp.conf=). These are the files that indicate which
-cloud provider is to be used.
-
-The =aws=, =azure= and =gcp= directories contain the files relevant to
-each cloud provider. We'll reference the general notion of a provider
-directory using the =$PROVIDER= nomenclature, where =$PROVIDER= takes
-the value =aws=, =azure= or =gcp=.
-
-The main configuration file is =$PROVIDER.conf=. This file itself
-includes the files needed for the specific cloud provider. We will only
-describe the properties files here:
-
-- =$PROVIDER/provider.properties= - a file containing the provider
-  configuration for Amazon Web Services
-- =$PROVIDER/ssh.properties= - a file containing the details required to
-  configure passwordless ssh access into the machines that director will
-  create.
-- =$PROVIDER/kerberos.properties= - an /optional/ file containing the
-  details of the Kerberos Key Distribution Center (KDC) to be used for
-  kerberos authentication. (See Kerberos Tricks below for details on how
-  to easily setup an MIT KDC and use it). /If/ =kerberos.properties= is
-  provided then a secure cluster is set up. If =kerberos.properties= is
-  not provided then an insecure cluster will be setup.
-
-** SECRET files
-   :PROPERTIES:
-   :CUSTOM_ID: secret-files
-   :END:
-
-SECRET files are ignored by GIT and you must construct them yourself. We
-recommend setting their mode to 600, although that is not enforced
-anywhere.
-
-*** AWS
-   :PROPERTIES:
-   :CUSTOM_ID: aws
-   :END:
-
-The secret file for AWS is =aws/SECRET.properties=. It is in Java
-Properties format and contains the AWS secret access key:
-
-#+BEGIN_EXAMPLE
-    AWS_SECRET_ACCESS_KEY=
-#+END_EXAMPLE
-
-Mine, with dots hiding characters from the secret key, looks like:
-
-#+BEGIN_EXAMPLE
-    AWS_SECRET_ACCESS_KEY=53Hrd................r0wiBbKn3
-#+END_EXAMPLE
-
-If you fail to set up the =AWS_SECRET_KEY= then you'll find that
-cloudera-director silently fails, but grepping for =AWS_SECRET_KEY= in
-the local log file will reveal all:
-
-#+BEGIN_SRC sh
-    [centos@ip-10-0-0-239 ~]$ unset AWS_ACCESS_KEY_ID #just to make sure its undefined!
-    [centos@ip-10-0-0-239 ~]$ cloudera-director bootstrap-remote filetest.conf --lp.remote.username=admin --lp.remote.password=admin
-    Process logs can be found at /home/centos/.cloudera-director/logs/application.log
-    Plugins will be loaded from /var/lib/cloudera-director-plugins
-    Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize=256M; support was removed in 8.0
-    Cloudera Director 2.4.0 initializing ...
-    [centos@ip-10-0-0-239 ~]$ 
-#+END_SRC
-
-Looks like its failed, right, because it doesn't continue on. No error
-message! But if you execute:
-
-#+BEGIN_EXAMPLE
-    [centos@ip-10-0-0-239 ~]$ grep AWS_SECRET ~/.cloudera-director/logs/application.log
-    com.typesafe.config.ConfigException$UnresolvedSubstitution: filetest.conf: 28: Could not resolve substitution to a value: ${AWS_SECRET_ACCESS_KEY}
-#+END_EXAMPLE
-
-You'll discover the problem! (Or there's another problem, and you should
-look in that log file for details).
-
-*** Azure
- The secet file for Azure is called =SECRET.properties=. It contains a
- single key value pair, where the key is =CLIENTSECRET=.
-
-Here's my =azure/SECRET.properties= file:
-
-#+BEGIN_EXAMPLE
-CLIENTSECRET=jhwf4Gf+ ... zD+e3k=
-#+END_EXAMPLE
-
-*** GCP
-    :PROPERTIES:
-    :CUSTOM_ID: gcp
-    :END:
-
-The secret file for GCP is called =SECRET.json=. It contains the full
-Google Secret Key, in JSON format, that you obtained when you made your
-google account.
-
-Mine, with characters of the private key id and lines of the private key
-replaced by dots, looks like:
-
-#+BEGIN_EXAMPLE
-    {
-      "type": "service_account",
-      "project_id": "gcp-se",
-      "private_key_id": "b27f..................66fea",
-      "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDMUKtOk000wkvJ\np/ZdwfkbpowUGMqpn2a0oQ9eTwIaLnPvrTIP3JcibWU7xkzoPXlD4hiANlkSqDqy
-    .
-    .
-    .
-    .
-    .
-    .
-    UC2sMUZ1rtLCv14qg4iiXuA/RExTs1zRaZZ0r4c\nTDiZwBJEbs0flCAziv7mJ4TZ3LfGKCtrTOhUWRw/jfDHP+uJOpH2isGmytZ7uWVN\ndfllnxLITzHEQEMh0rbc/g3n\n-----END PRIVATE KEY-----\n",
-      "client_email": "tobys-service-account@gcp-se.iam.gserviceaccount.com",
-      "client_id": "108988546221753267035",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://accounts.google.com/o/oauth2/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/tobys-service-account%40gcp-se.iam.gserviceaccount.com"
-    }
-#+END_EXAMPLE
-
-* Troubleshooting
-   :PROPERTIES:
-   :CUSTOM_ID: troubleshooting
-   :END:
-
-There are two logs of interest:
-
-- client log: $HOME/.cloudera-director/logs/application.log on client
-  machine
-- server log: /var/log/cloudera-director-server/application.log on
-  server machine
-
-If the cloudera-director client fails before communicating with the
-server you should look in the client log. Otherwise look in the server
-log.
-
-The server log can be large - I /truncate/ it frequently (i.e. =echo >
-/var/log/cloudera-director-server/application.log=) while the Director
-server is running; especially before using a new conf file! Don't
-simply delete it; doing so will mess up the Director (unless the
-Director server is stopped)
-
-** No provider
-If you see this:
-
-#+BEGIN_EXAMPLE
- * No provider configuration block found
-#+END_EXAMPLE
-
-then you've likely executed =cloudera-bootstrap= in the PROVIDER directory. You need to be in the top directory (where the =common.conf= file is) and execute =cloudera-bootstrap= there.
-** GCP
-    :PROPERTIES:
-    :CUSTOM_ID: gcp-1
-    :END:
-
-*** No Plugin
-     :PROPERTIES:
-     :CUSTOM_ID: no-plugin
-     :END:
-
-If the client fails with this message:
-
-#+BEGIN_SRC sh
-    * ErrorInfo{code=PROVIDER_EXCEPTION, properties={message=Mapping for image alias 'rhel7' not found.}, causes=[]}
-#+END_SRC
-
-then you've not configured the plugin for GCP, as detailed in the
-[[GCP Director Configuration]] section.
-
-*** Old Plugin
-     :PROPERTIES:
-     :CUSTOM_ID: old-plugin
-     :END:
-
-If the client fails thus:
-
-#+BEGIN_EXAMPLE
-    * Requesting an instance for Cloudera Manager ............ done
-    * Installing screen package (1/1) .... done
-    * Suspended due to failure ...
-#+END_EXAMPLE
-
-and the server log contains something like this:
-
-#+BEGIN_EXAMPLE
-    peers certificate marked as not trusted by the user
-#+END_EXAMPLE
-
-then you've got a plugin configured, but its out of date. Update is,
-as per the [[GCP Director Configuration]] section.
-
-* Limitations & Issues
-   :PROPERTIES:
-   :CUSTOM_ID: limitations-issues
-   :END:
-
-Relies on [[NIP.io tricks]] to make it work.
-
-Requires that the CDSW port be on the public internet.
-
-* Appendix
-** NIP.io tricks
-   :PROPERTIES:
-   :CUSTOM_ID: nip.io-tricks
-   :END:
-
-[[http://nip.io][NIP.io]] is a public bind server that uses the FQDN
-given to return an address. A simple explanation is if you have your kdc
-at IP address =10.3.4.6=, say, then you can refer to it as
-=kdc.10.3.4.6.nip.io= and this name will be resolved to =10.3.4.6=
-(indeed, =foo.10.3.4.6.nip.io= will likewise resolve to the same actual
-IP address). (Note that earlier releases of this project used =xip.io=,
-but that's located in Norway and for me in the USA =nip.io=, located in
-the Eastern US, works better.)
-
-This technique is used in two places: + In the director conf file to
-specify the IP address of the KDC - instead of messing around with bind
-or =/etc/hosts= in a bootstrap script etc. simply set the KDC\_HOST to
-=kdc.A.B.C.D.xip.io= (choosing appropriate values for A, B, C & D as per
-your setup) + When the cluster is built you will access the CDSW at the
-public IP address of the CDSW instance. Lets assume that that address is
-=C.D.S.W= (appropriate, some might say) - then the URL to access that
-instance would be http://ec2.C.D.S.W.xip.io
-
-This is great for hacking around with ephemeral devices such as VMs and
-Cloud images!
-
-** Useful Scripts
-   :PROPERTIES:
-   :CUSTOM_ID: useful-scripts
-   :END:
-
-*** Server Config
-    :PROPERTIES:
-    :CUSTOM_ID: server-config
-    :END:
-
-In =/var/kerberos/krb5kdc/kdc.conf=:
-
-#+BEGIN_EXAMPLE
-    [kdcdefaults]
-     kdc_ports = 88
-     kdc_tcp_ports = 88
-
-    [realms]
-     HADOOPSECURITY.LOCAL = {
-     acl_file = /var/kerberos/krb5kdc/kadm5.acl
-     dict_file = /usr/share/dict/words
-     admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
-     supported_enctypes = aes256-cts-hmac-sha1-96:normal aes128-cts-hmac-sha1-96:normal arcfour-hmac-md5:normal
-     max_renewable_life = 7d
-    }
-#+END_EXAMPLE
-
-In =/var/kerberos/krb5kdc/kadm5.acl= I setup any principal with the
-=/admin= extension as having full rights:
-
-#+BEGIN_EXAMPLE
-    */admin@HADOOPSECURITY.LOCAL    *
-#+END_EXAMPLE
-
-I then execute the following to setup the users etc:
-
-#+BEGIN_SRC sh
-    sudo kdb5_util create -P Passw0rd!
-    sudo kadmin.local addprinc -pw Passw0rd! cm/admin
-    sudo kadmin.local addprinc -pw Cloudera1 cdsw
-
-    systemctl start krb5kdc
-    systemctl enable krb5kdc
-    systemctl start kadmin
-    systemctl enable kadmin
-#+END_SRC
-
-Note that the CM username and credentials are
-=cm/admin@HADOOPSECURITY.LOCAL= and =Passw0rd!= respectively.
-
-*** Client Config (Managed by Cloudera Manager)
-    :PROPERTIES:
-    :CUSTOM_ID: client-config-managed-by-cloudera-manager
-    :END:
-
-In =/etc/krb5.conf= I have this:
-
-#+BEGIN_EXAMPLE
-    [libdefaults]
-     default_realm = HADOOPSECURITY.LOCAL
-     dns_lookup_realm = false
-     dns_lookup_kdc = false
-     ticket_lifetime = 24h
-     renew_lifetime = 7d
-     forwardable = true
-     default_tgs_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5
-     default_tkt_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5
-     permitted_enctypes = aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5
-
-    [realms]
-     HADOOPSECURITY.LOCAL = {
-      kdc = 10.0.0.82
-      admin_server = 10.0.0.82
-     }
-#+END_EXAMPLE
-
-(Note that the IP address used is that of the private IP address of the
-director server; this is stable over reboot so works well)
-
-** ActiveDirectory
-   :PROPERTIES:
-   :CUSTOM_ID: activedirectory
-   :END:
-
-(Deprecated - I found this image to be unstable. It would just stop
-working after 3 days or so.) I use a public ActiveDirectory ami setup by
-Jeff Bean: =ami-a3daa0c6= to create an AD instance.
-
-The username/password to the image are =Administrator/Passw0rd!=
-
-Allow at least 5, maybe 10 minutes for the image to spin up and work
-properly.
-
-The kerberos settings (which you'd put into =kerberos.conf=) are:
-
-#+BEGIN_EXAMPLE
-    krbAdminUsername: "cm@HADOOPSECURITY.LOCAL"
-    krbAdminPassword: "Passw0rd!
-    KDC_TYPE: "Active Directory"
-    KDC_HOST: "hadoop-ad.hadoopsecurity.local"
-    KDC_HOST_IP: # WHATEVER THE INTERNAL IP ADDRESS IS FOR THIS INSTANCE
-    SECURITY_REALM: "HADOOPSECURITY.LOCAL"
-    AD_KDC_DOMAIN: "OU=hadoop,DC=hadoopsecurity,DC=local"
-    KRB_MANAGE_KRB5_CONF: true
-    KRB_ENC_TYPES: "aes256-cts-hmac-sha1-96 aes128-cts-hmac-sha1-96 arcfour-hmac-md5"
-#+END_EXAMPLE
-
-(Don't forget to drop the aes256 encryption if your images don't have
-the Java Crypto Extensions installed)
-
-** Standard users and groups
-   :PROPERTIES:
-   :CUSTOM_ID: standard-users-and-groups
-   :END:
-
-I use the following to create standard users and groups, running this on
-each machine in the cluster:
-
-#+BEGIN_SRC sh
-    sudo groupadd supergroup
-    sudo useradd -G supergroup -u 12354 hdfs_super
-    sudo useradd -G supergroup -u 12345 cdsw
-    echo Cloudera1 | sudo passwd --stdin cdsw
-#+END_SRC
-
-And then adding the corresponding hdfs directory from a single cluster
-machine:
-
-#+BEGIN_SRC sh
-    kinit cdsw
-    hdfs dfs -mkdir /user/cdsw
-#+END_SRC
