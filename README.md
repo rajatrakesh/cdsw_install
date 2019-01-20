@@ -1,6 +1,6 @@
 ## CDSW Installation On Cloud
 
-This project is derived from the fantastic and simply awesome work done by TobyFergusion (https://github.com/tobyHFerguson). Toby wrote an extensive document on how to install CDSW early on. The document is quite technical and provides extensive coverage into how CDSW is to be installed. I aim to extend that and perhaps simplify certain steps esp. for people who are new to CDSW, and also highlight a few gotchas that I encountered in the process. 
+This project is derived from the extensive and simply awesome work done by [TobyHFerguson](https://github.com/tobyHFerguson/cdsw_install). Toby wrote an extensive document on how to install CDSW early on. The document is quite technical and provides extensive coverage into how CDSW is to be installed on various cloud platforms. I hope to be able to contribute to that and perhaps simplify certain steps esp. for people who are new to CDSW, and also highlight a few gotchas that I encountered in the process. 
 
 The aim of this following document is to simply the creation and deployment of the CDSW cluster (including kerberos) on Cloud Platforms (AWS, Azure and GCP) using Cloudera Director. 
 
@@ -8,9 +8,9 @@ The approach for deployment remains largely the same so with minor changes, you 
 
 The total duration of the build would be around an hour end-to-end and I have made some edits in the scripts to automate certain steps which were previously manual. 
 
-## Pre-Requsities
+## Pre-Requisities
 
-Needless to say, before you start you must have access to respective cloud platform with adequate credits to deploy CDSW/CDH Cluster. At the very minimum, we will deploy (3+1+1+3) nodes of various shapes, so this may need adequate credits based on the shape that you use. 
+Needless to say, before you start you must have access to respective cloud platform with adequate credits to deploy CDSW/CDH Cluster. At the very minimum, we will deploy (1MN+3DN+1CDSWMN+1CDSWDN) nodes of various shapes, so this may need adequate credits based on the shape that you use. 
 
 Our basic workflow would be as follows:
 
@@ -396,7 +396,7 @@ At this point, we have a 5-14 CDH Kerberized Cluster with CDSW configured. To co
 
 ![Engine Profile](./images/cdsw-05.jpg)
 
-* Sample Content for testing Python, R & Scala: The easiest option is to have participants create project using a template and use that to run their first project. In addition to this, there is sample scripts available at ```http://github.com/rajatrakesh/cdsw-demo-short``` (Thanks to Toby Ferguson, from whom I have forked this). 
+* Sample Content for testing Python, R & Scala: The easiest option is to have participants create project using a template and use that to run their first project. In addition to this, there is sample scripts available at ```http://github.com/rajatrakesh/cdsw-demo-short``` (Thanks to [Toby Ferguson](https://github.com/TobyHFerguson/cdsw-demo-short), from whom I have forked this). 
 
 ## CDSW Workshop
 
