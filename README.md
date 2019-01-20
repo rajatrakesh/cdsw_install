@@ -29,13 +29,32 @@ Our basic workflow would be as follows:
 
 ## Instance Shapes / Cost
 
-For the deployment, I would be using the following shapes in AWS:
+For the deployment, I would be using the following shapes in AWS (USD):
 
-* Director 	( 4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
-* CDH Master 	( 4CPU, 16 GB RAM) 		- m4.xlarge (xx/hr)
-* CDH Workers	( 4CPU, 16 GB RAM)		- m4.xlarge (xx/hr)
-* CDSW Master	(16CPU, 64 GB RAM)		- m4.xlarge (xx/hr)
-* CDSW Worker	(16CPU, 64 GB RAM)		- m4.xlarge (xx/hr)
+* Director 		( 4CPU, 16 GB RAM) 		- m4.xlarge (.2340/hr)
+* Cloudera Manager ( 16CPU, 30GB RAM)	- c4.4xlarge (.9970/hr)
+* CDH Master 	(  8CPU, 15 GB RAM) 	- c4.2xlarge (.9970/hr)
+* CDH Workers	( 16CPU, 30 GB RAM)		- c4.4xlarge (.4980/hr)
+* CDSW Master	( 16CPU, 30 GB RAM)		- c4.4xlarge (.9970/hr)
+* CDSW Worker	( 16CPU, 30 GB RAM)		- c4.4xlarge (.9970/hr)
+OR
+* CDSW Worker ( 36CPU, 60 GB RAM)		- c4.8xlarge (1.9930/hr)
+
+There are also additional costs for the EBS volumes that are attached to the CDSW Master and Worker Instances. **EBS Volumes can sometimes cost more than the instances themselves, so do be mindful when you start/terminate these**
+
+As a sample, it would cost **USD 368** to have the above combo running for a day. 
+
+### Option 1
+
+![Option 1](./images/costs1a.jpg)
+![Option 1](./images/costs1b.jpg)
+
+### Option 2
+
+If you are looking for a lot of people in the workshop, then you may wish to either deploy multiple clusters or increase the capacity of the instances. The pricing increases accordingly. For example, swapping out the CDSW workers to the higher (c4.8xlarge) instances costs **USD 445**, as follows:
+
+![Option 2](./images/costs2a.jpg)
+![Option 2](./images/costs2b.jpg)
 
 For all instances, I will be using the following AMI - ```ami-78485818```
 All instances will be launched in the region : ```us-west-1``` which is also the cheapest option based on instance cost.
