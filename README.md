@@ -1,6 +1,6 @@
 ## CDSW Installation On Cloud
 
-This project is derived from the fantastic work done by TobyFergusion (https://github.com/tobyHFerguson). Toby wrote an extensive document on how to install CDSW early on. The document is quite technical and provides extensive coverage into how CDSW is to be installed. I aim to extend that and perhaps simply certain steps, highlight a few gotchas that I encountered in the process. 
+This project is derived from the fantastic and simply awesome work done by TobyFergusion (https://github.com/tobyHFerguson). Toby wrote an extensive document on how to install CDSW early on. The document is quite technical and provides extensive coverage into how CDSW is to be installed. I aim to extend that and perhaps simplify certain steps esp. for people who are new to CDSW, and also highlight a few gotchas that I encountered in the process. 
 
 The aim of this following document is to simply the creation and deployment of the CDSW cluster (including kerberos) on Cloud Platforms (AWS, Azure and GCP) using Cloudera Director. 
 
@@ -316,6 +316,8 @@ The last step now is to change the ```KDC_HOST_IP``` variable in the ```./aws/ke
 	
 Copy and replace this in the kerberos.properties. After this step, the only thing left to do is to run the director bootstrap. 
 
+## Director Bootstrap
+
 The director bootstrap needs to be executed in /home/centos/ and **NOT** in the /aws folder where all the configuration files are. 
 
 	cloudera-director bootstrap-remote aws.conf --lp.remote.username=admin --lp.remote.password=admin
@@ -323,6 +325,105 @@ The director bootstrap needs to be executed in /home/centos/ and **NOT** in the 
 The installation will begin, and you would see something like this:
 
 ![Director Bootstrap](./images/director-12.jpg)
+
+Once the process is complete (and hopefully no errors), you would see the confirmation ```Cluster Ready```
+
+![Director Complete](./images/director-13.jpg)
+
+## Cloudera Manager 
+
+Once the cluster is ready, it will take sometime for all the services to start up, especially for CDSW. (In my case, takes 15mins +). 
+
+The ip for Cloudera Manager would be available from the AWS console. Looking at the console, you will see all the instances started up. I usually follow a naming convention to make these easier to track. This can also be configured from the ```provider.properties``` file as well. 
+
+![AWS Instances](./images/aws-01.jpg)
+
+The Cloudera Manager instance will begin with ```cm-cdh-5-14...```. Copy the ip and access the Cloudera Manager console at: 
+
+```http://xx.xx.xx.xx:7180```
+
+We can see that all services are up and started. 
+
+![Cloudera Manager](./images/cluster-02.jpg)
+
+## Accessing Data Science Workbench
+
+CDSW uses the Nip.io trick to access the Data Science Console. NIP.io is a public bind server that uses the FQDN given to return an address. A simple explanation is if you have your kdc at IP address 10.3.4.6, say, then you can refer to it as kdc.10.3.4.6.nip.io and this name will be resolved to 10.3.4.6 (indeed, foo.10.3.4.6.nip.io will likewise resolve to the same actual IP address). 
+
+This technique is used in two places: + In the director conf file to specify the IP address of the KDC - instead of messing around with bind or /etc/hosts in a bootstrap script etc. simply set the KDC\_HOST to kdc.A.B.C.D.xip.io (choosing appropriate values for A, B, C & D as per your setup) + When the cluster is built you will access the CDSW at the public IP address of the CDSW instance. Lets assume that that address is C.D.S.W (appropriate, some might say) - then the URL to access that instance would be http://ec2.C.D.S.W.xip.io
+
+This is great for hacking around with ephemeral devices such as VMs and Cloud images!
+
+To find the ip for your CDSW instance, simply access the configration settings for CDSW in Cloudera Manager and look for the property ```Cloudera Data Science Workbench Domain```
+
+![CDSW Domain](./images/cluster-03.jpg)
+
+Alternatively, this would be the public ip of your CDSW Master instance. Simply append cdsw before the ip and nip.io at the end, so the CDSW url would be ```http://cdsw.xx.xx.xx.xx.nip.io```
+
+CDSW Console should be available at this point. 
+
+![CDSW Login](./images/cdsw-01.jpg)
+
+**Important: There are no users created for CDSW at this point. The first user to register will become the CDSW admin.**
+
+Let's click the ```Sign Up for a New Account``` on the login page and create a test user: rajat and password as: Cloudera1 
+
+The email id needs to be correct but is not used (Email server not setup). 
+
+![Account Setup](./images/cdsw-02.jpg)
+
+We can now login, and access the admin console. 
+
+![CDSW Access](./images/cdsw-03.jpg)
+
+Detailed admin options are available for the test user: rajat
+
+![CDSW Admin](./images/cdsw-04.jpg)
+
+## CDSW Workshop Setup
+
+At this point, we have a 5-14 CDH Kerberized Cluster with CDSW configured. To conduct a workshop on CDSW, you may have setup the following:
+
+* User accounts for CDSW
+* Engine Profiles
+* Sample Content for testing Python, R & Scala
+
+* User Accounts: An easy option could be to ask the users to register during the workshop, but this sometimes could be a messy option since users could choose their on id and also difficult to control access. **The number 1 issue that I have experienced during CDSW workshops is too many people trying to register, access and create containers at the same time.** Hence, a better idea might be to pre-create a few user ids in advance : cdsw01....cdsw10.
+
+* Engine Profiles: By default, CDSW comes with one Base Image (Default v5), engine profile (1vCPU,2 GB RAM). I would recommend adding the following:
+	- 1vCPU, 4 GB RAM
+	- 2vCPU, 2 GB RAM
+	- 2vCPU, 4 GB RAM
+
+![Engine Profile](./images/cdsw-05.jpg)
+
+* Sample Content for testing Python, R & Scala: The easiest option is to have participants create project using a template and use that to run their first project. In addition to this, there is sample scripts available at ```http://github.com/rajatrakesh/cdsw-demo-short``` (Thanks to Toby Ferguson, from whom I have forked this). 
+
+## CDSW Workshop
+
+WIP - I am in the process of creating a simple workshop script that I will upload here (coming soon). This will cover:
+
+* Basic Project Setup
+* HDFS Access
+* Python, R & Scala Samples
+* Sample Visualizations
+* Example for Shiny
+* Scheduling Jobs
+* How to build a sample model
+* How to build a sample experiment
+* Some advanced examples (Tensorflow etc.)
+
+If you have any suggestions, or feedback on this tutorial or any in general, please do feel free to reach out to me at **rajat@cloudera.com** I hope this was useful for you. 
+
+
+
+
+
+ 
+
+
+
+
 
 
 
