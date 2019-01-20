@@ -166,10 +166,9 @@ Users:
 cm/admin@HADOOPSECURITY.LOCAL
 cdsw@HADOOPSECURITY.LOCAL
 
-KDC_HOST_IP: 0.0.0.0
+```KDC_HOST_IP: 0.0.0.0```
 
-ote that its the /ip address/ that you should use
-  here because of a CDSW/Kubernetes defect: [[https://jira.cloudera.com/browse/DSE-1796][DSE-1796]]
+Do note that it's the ```ip address``` that you should use here because of a CDSW/Kubernetes defect: [DSE-1796](https://jira.cloudera.com/browse/DSE-1796)
 
 ## /aws/provider.conf
 Sets up aws properties in variables (accessKeyId etc.) **No changes required**
@@ -401,7 +400,7 @@ At this point, we have a 5-14 CDH Kerberized Cluster with CDSW configured. To co
 
 ## CDSW Workshop
 
-WIP - I am in the process of creating a simple workshop script that I will upload here (coming soon). This will cover:
+**WIP** - I am in the process of creating a simple workshop script that I will upload here (coming soon). This will cover:
 
 * Basic Project Setup
 * HDFS Access
